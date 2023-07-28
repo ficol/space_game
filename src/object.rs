@@ -49,7 +49,7 @@ impl Object {
             return DVec2::ZERO;
         }
         let value = self.mass / (self.location.distance(other.location).powf(2.0));
-        (self.location - other.location).normalize() * value
+        (other.location - self.location).normalize() * value
     }
 
     pub fn bound(&mut self, size: &DVec2) {
@@ -112,7 +112,7 @@ mod tests {
         let object = Object::new(DVec2::new(0.0, 0.0), 1.0, 1.0, DVec2::ZERO);
         let object2 = Object::new(DVec2::new(0.0, 1.0), 1.0, 1.0, DVec2::ZERO);
         let field = object.get_field(&object2);
-        assert_vectors!(DVec2::new(0.0, -1.0), field, 1e-6);
+        assert_vectors!(DVec2::new(0.0, 1.0), field, 1e-6);
     }
 
     #[test]
