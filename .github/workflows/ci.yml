@@ -1,0 +1,27 @@
+name: CI
+
+on: push
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  style:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Fmt
+      run: cargo fmt --all -- --check --verbose
+    - name: Clippy
+      run: cargo clippy -- -D warnings --verbose
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Check
+      run: cargo check --verbose
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
