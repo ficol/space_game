@@ -1,10 +1,10 @@
 use glam::f64::DVec2;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 pub trait Updatable {
     fn update(&mut self, time: f64);
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Object {
     location: DVec2,
     radius: f64,

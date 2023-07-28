@@ -1,11 +1,10 @@
 use glam::DVec2;
-use serde::Serialize;
-use serde_json::Result;
+use serde::{Deserialize, Serialize};
 
 use crate::object::Object;
 use crate::object::Updatable;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Space {
     size: DVec2,
     planets: Vec<Object>,
@@ -21,10 +20,6 @@ impl Space {
             ships: vec![],
             bullets: vec![],
         }
-    }
-
-    pub fn get_state(&self) -> Result<Vec<u8>> {
-        serde_json::to_vec(self)
     }
 
     pub fn add_planet(&mut self, location: DVec2, radius: f64, mass: f64, velocity: DVec2) -> bool {
@@ -149,7 +144,7 @@ impl Updatable for Space {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ShipConfig {
     bullet_speed: f64,
     bullet_radius: f64,
@@ -168,7 +163,7 @@ impl ShipConfig {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Ship {
     id: u8,
     object: Object,
@@ -177,13 +172,13 @@ struct Ship {
     score: Score,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Score {
     kills: u32,
     deaths: u32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Bullet {
     id: u8,
     object: Object,
