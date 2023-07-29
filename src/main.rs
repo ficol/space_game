@@ -1,51 +1,60 @@
+mod display;
 mod object;
 mod space;
 
-use glam::DVec2;
-use std::sync::mpsc::{self, Receiver, Sender};
+use clap::Parser;
+use display::print_game;
+use object::Updatable;
+use space::Space;
+use std::fs;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{thread, time::SystemTime};
 
-use crate::{object::Updatable, space::ShipConfig};
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-fn main() {
-    let mut space = space::Space::new(DVec2::new(100.0, 100.0));
-    let ship_config = ShipConfig::new(1.0, 1.0, 1.0, 10.0);
-    space.add_planet(DVec2::new(10.0, 10.0), 1.0, 100.0, DVec2::ZERO);
-    let id1 = space.add_ship(DVec2::new(20.0, 20.0), 1.0, 100.0, ship_config);
-    space.move_ship(id1.unwrap(), None);
-    space.shoot(id1.unwrap(), 0.0);
-    space.update(10.0);
-    space.remove_ship(id1.unwrap());
-    let ship_config2 = ShipConfig::new(1.0, 1.0, 1.0, 10.0);
-    let _ = space.add_ship(DVec2::new(20.0, 20.0), 1.0, 100.0, ship_config2);
+/// Space Game
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Path to json file with map configuration
+    #[arg(long, default_value_t = String::from("maps/example.json"))]
+    path: String,
 
-    let (tx, rx) = mpsc::channel();
-    let handle = thread::spawn(move || {
-        run_space(&mut space, tx);
-    });
-    let handle2 = thread::spawn(move || {
-        print_space_state(rx);
-    });
-
-    handle.join().unwrap();
-    handle2.join().unwrap();
+    /// Port to bind server
+    #[arg(long, default_value_t = 8888)]
+    port: u32,
 }
 
-fn run_space(space: &mut space::Space, tx: Sender<String>) -> ! {
+fn main() -> Result<()> {
+    let args = Args::parse();
+
+    let space: Space = serde_json::from_slice(&fs::read(args.path)?)?;
+    let space_counter = Arc::new(Mutex::new(space));
+
+    let update_counter = Arc::clone(&space_counter);
+    thread::spawn(move || {
+        run_game(&update_counter);
+    });
+
+    let print_counter = Arc::clone(&space_counter);
+    print_game(&print_counter)?;
+
+    Ok(())
+}
+
+fn run_game(space_mutex: &Arc<Mutex<Space>>) -> ! {
     let now = SystemTime::now();
+    let mut prev = now.elapsed().unwrap().as_secs_f64();
     loop {
-        std::thread::sleep(Duration::new(1, 0));
-        if let Ok(elapsed) = now.elapsed() {
-            space.update(elapsed.as_secs_f64());
+        std::thread::sleep(Duration::new(0, 1000));
+        {
+            let mut space = space_mutex.lock().unwrap();
+            if let Ok(elapsed) = now.elapsed() {
+                let curr = elapsed.as_secs_f64();
+                space.update(curr - prev);
+                prev = curr;
+            }
         }
-        tx.send(serde_json::to_string_pretty(&space).unwrap())
-            .expect("send failed");
-    }
-}
-
-fn print_space_state(rx: Receiver<String>) -> ! {
-    loop {
-        println!("{}", rx.recv().unwrap());
     }
 }
