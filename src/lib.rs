@@ -3,7 +3,6 @@ mod object;
 mod space;
 
 use display::print_game;
-use object::Updatable;
 use space::Space;
 use std::fs;
 use std::sync::{Arc, Mutex};
@@ -26,16 +25,13 @@ pub fn run(path: &str, _port: u32) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run_game(space_mutex: &Arc<Mutex<Space>>) -> ! {
-    let now = SystemTime::now();
-    let mut prev = now.elapsed().unwrap().as_secs_f64();
     loop {
+        let start = SystemTime::now();
         std::thread::sleep(Duration::new(0, 1000));
         {
-            let mut space = space_mutex.lock().unwrap();
-            if let Ok(elapsed) = now.elapsed() {
-                let curr = elapsed.as_secs_f64();
-                space.update(curr - prev);
-                prev = curr;
+            if let Ok(duration) = start.elapsed() {
+                let mut space = space_mutex.lock().unwrap();
+                space.update(duration.as_secs_f64());
             }
         }
     }

@@ -1,44 +1,46 @@
 {
-    "size": [
-        1000.0,
-        1000.0
-    ],
-    "planets": [
-        {
+  "size": [
+    1000.0,
+    1000.0
+  ],
+  "planets": [
+    {
+      "properties": {
         "location": [
-            500.0,
-            500.0
+          500.0,
+          500.0
         ],
         "radius": 1.0,
         "mass": 62500000.0,
         "velocity": [
-            0.0,
-            0.0
+          0.0,
+          0.0
         ],
         "acceleration": [
-            0.0,
-            0.0
+          0.0,
+          0.0
         ]
-        },
-        {
-            "location": [
-                250.0,
-                500.0
-            ],
-            "radius": 1.0,
-            "mass": 1.0,
-            "velocity": [
-                0.0,
-                500.0
-            ],
-            "acceleration": [
-                0.0,
-                0.0
-            ]
-            }
-    ],
-    "ships": [
-    ],
-    "bullets": [
-    ]
+      }
+    },
+    {
+      "properties": {
+        "location": [
+          250.0,
+          500.0
+        ],
+        "radius": 1.0,
+        "mass": 1.0,
+        "velocity": [
+          0.0,
+          500.0
+        ],
+        "acceleration": [
+          0.0,
+          0.0
+        ]
+      }
+    }
+  ],
+  "ships": [],
+  "bullets": []
 }
