@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: sudo apt-get update; sudo apt-get --no-install-recommends install libsdl2-dev
     - name: Check
       run: cargo check --verbose
     - name: Build

@@ -1,12 +1,13 @@
 use glam::f64::DVec2;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
 pub trait Updatable {
     fn update(&mut self, time: f64);
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Object {
-    location: DVec2,
+    pub location: DVec2, //tmp
     radius: f64,
     mass: f64,
     velocity: DVec2,
@@ -45,15 +46,15 @@ impl Object {
     }
 
     pub fn get_field(&self, other: &Self) -> DVec2 {
-        if self.location == other.location {
+        if self.location.distance(other.location) < other.radius {
             return DVec2::ZERO;
         }
-        let value = self.mass / (self.location.distance(other.location).powf(2.0));
+        let value = other.mass / (self.location.distance(other.location).powf(2.0));
         (other.location - self.location).normalize() * value
     }
 
     pub fn bound(&mut self, size: &DVec2) {
-        self.location = self.location.clamp(DVec2::MIN, *size);
+        self.location = self.location.clamp(DVec2::ZERO, *size);
     }
 }
 
@@ -110,16 +111,24 @@ mod tests {
     #[test]
     fn calculate_field() {
         let object = Object::new(DVec2::new(0.0, 0.0), 1.0, 1.0, DVec2::ZERO);
-        let object2 = Object::new(DVec2::new(0.0, 1.0), 1.0, 1.0, DVec2::ZERO);
+        let object2 = Object::new(DVec2::new(0.0, 1.0), 1.0, 2.0, DVec2::ZERO);
         let field = object.get_field(&object2);
-        assert_vectors!(DVec2::new(0.0, 1.0), field, 1e-6);
+        assert_vectors!(DVec2::new(0.0, 2.0), field, 1e-6);
     }
 
     #[test]
-    fn bound() {
+    fn bound_max() {
         let mut object = Object::new(DVec2::new(100.0, 80.0), 1.0, 1.0, DVec2::ZERO);
         let size = DVec2::new(50.0, 40.0);
         object.bound(&size);
         assert_vectors!(size, object.location, 1e-6);
+    }
+
+    #[test]
+    fn bound_min() {
+        let mut object = Object::new(DVec2::new(-10.0, -20.0), 1.0, 1.0, DVec2::ZERO);
+        let size = DVec2::new(50.0, 40.0);
+        object.bound(&size);
+        assert_vectors!(DVec2::ZERO, object.location, 1e-6);
     }
 }

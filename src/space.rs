@@ -1,11 +1,10 @@
 use glam::DVec2;
-use serde::Serialize;
-use serde_json::Result;
+use serde::{Deserialize, Serialize};
 
 use crate::object::Object;
 use crate::object::Updatable;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Space {
     size: DVec2,
     planets: Vec<Object>,
@@ -13,6 +12,7 @@ pub struct Space {
     bullets: Vec<Bullet>,
 }
 
+#[allow(dead_code)]
 impl Space {
     pub fn new(size: DVec2) -> Space {
         Space {
@@ -23,8 +23,19 @@ impl Space {
         }
     }
 
-    pub fn get_state(&self) -> Result<Vec<u8>> {
-        serde_json::to_vec(self)
+    ///tmp
+    pub fn get_objects_location(&self) -> Vec<(f64, f64)> {
+        let mut locations = vec![];
+        for planet in self.planets.iter() {
+            locations.push((planet.location[0], planet.location[1]));
+        }
+        for ship in self.ships.iter() {
+            locations.push((ship.object.location[0], ship.object.location[1]));
+        }
+        for bullet in self.bullets.iter() {
+            locations.push((bullet.object.location[0], bullet.object.location[1]));
+        }
+        locations
     }
 
     pub fn add_planet(&mut self, location: DVec2, radius: f64, mass: f64, velocity: DVec2) -> bool {
@@ -110,7 +121,7 @@ impl Updatable for Space {
         for (i, planet) in self.planets.iter_mut().enumerate() {
             planet.update(time);
             planet.bound(&self.size);
-            planet.change_acceleration(&total_planet_fields[i]); //TODO
+            planet.change_acceleration(&total_planet_fields[i]);
         }
         for bullet in self.bullets.iter_mut() {
             bullet.object.update(time);
@@ -149,7 +160,7 @@ impl Updatable for Space {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ShipConfig {
     bullet_speed: f64,
     bullet_radius: f64,
@@ -157,18 +168,7 @@ pub struct ShipConfig {
     force: f64,
 }
 
-impl ShipConfig {
-    pub fn new(bullet_speed: f64, bullet_radius: f64, bullet_mass: f64, force: f64) -> Self {
-        ShipConfig {
-            bullet_speed,
-            bullet_radius,
-            bullet_mass,
-            force,
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Ship {
     id: u8,
     object: Object,
@@ -177,13 +177,13 @@ struct Ship {
     score: Score,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Score {
     kills: u32,
     deaths: u32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Bullet {
     id: u8,
     object: Object,
