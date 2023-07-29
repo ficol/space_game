@@ -12,6 +12,7 @@ pub struct Space {
     bullets: Vec<Bullet>,
 }
 
+#[allow(dead_code)]
 impl Space {
     pub fn new(size: DVec2) -> Space {
         Space {
