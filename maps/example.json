@@ -5,7 +5,7 @@
   ],
   "planets": [
     {
-      "properties": {
+      "object": {
         "location": [
           500.0,
           500.0
@@ -23,7 +23,7 @@
       }
     },
     {
-      "properties": {
+      "object": {
         "location": [
           250.0,
           500.0

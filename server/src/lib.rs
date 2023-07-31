@@ -1,30 +1,27 @@
-mod display;
+mod connection;
 mod object;
 mod space;
 
-use display::print_game;
+use connection::run_connection;
 use space::Space;
 use std::fs;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{thread, time::SystemTime};
 
-pub fn run(path: &str, _port: u32) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run(path: &str, port: u32) -> Result<(), Box<dyn std::error::Error>> {
     let space: Space = serde_json::from_slice(&fs::read(path)?)?;
     let space_counter = Arc::new(Mutex::new(space));
 
-    let update_counter = Arc::clone(&space_counter);
-    thread::spawn(move || {
-        run_game(&update_counter);
-    });
+    let connection_counter = Arc::clone(&space_counter);
+    thread::spawn(move || run_connection(&connection_counter, port));
 
-    let print_counter = Arc::clone(&space_counter);
-    print_game(&print_counter)?;
+    run_game(&space_counter);
 
     Ok(())
 }
 
-fn run_game(space_mutex: &Arc<Mutex<Space>>) -> ! {
+fn run_game(space_mutex: &Arc<Mutex<Space>>) {
     loop {
         let start = SystemTime::now();
         std::thread::sleep(Duration::new(0, 1000));

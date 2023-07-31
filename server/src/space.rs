@@ -2,8 +2,7 @@ use glam::DVec2;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::object::Object;
-use crate::object::{self, Planet, Properties, Ship, ShipConfig};
+use crate::object::{self, Object, Planet, Ship, ShipConfig, Update};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Space {
@@ -24,22 +23,8 @@ impl Space {
         }
     }
 
-    // tmp
-    pub fn get_objects_location(&self) -> Vec<(f64, f64)> {
-        let mut locations = vec![];
-        for planet in self.planets.iter() {
-            let location = planet.get_location();
-            locations.push((location[0], location[1]));
-        }
-        for ship in self.ships.iter() {
-            let location = ship.get_location();
-            locations.push((location[0], location[1]));
-        }
-        for bullet in self.bullets.iter() {
-            let location = bullet.get_location();
-            locations.push((location[0], location[1]));
-        }
-        locations
+    pub fn get_state(&self) -> Result<Vec<u8>, serde_json::Error> {
+        serde_json::to_vec(self)
     }
 
     pub fn update(&mut self, time: f64) {
@@ -60,7 +45,7 @@ impl Space {
             })
             .collect();
         for (i, planet) in self.planets.iter_mut().enumerate() {
-            planet.update(time, &total_planet_fields[i], &self.size);
+            planet.update(time, total_planet_fields[i], self.size);
         }
     }
 
@@ -71,8 +56,10 @@ impl Space {
                 .iter()
                 .map(|other| bullet.get_field(other))
                 .sum();
-            bullet.update(time, &total_field, &self.size);
+            bullet.update(time, total_field, self.size);
         }
+        self.bullets
+            .retain(|bullet| self.planets.iter().all(|planet| !bullet.collision(planet)));
     }
 
     fn update_ships(&mut self, time: f64) {
@@ -80,14 +67,14 @@ impl Space {
         let mut death_ids = Vec::new();
         for ship in self.ships.iter_mut() {
             let total_field = self.planets.iter().map(|other| ship.get_field(other)).sum();
-            ship.update(time, &total_field, &self.size);
+            ship.update(time, total_field, self.size);
             if self.planets.iter().any(|planet| ship.collision(planet)) {
                 death_ids.push(ship.get_id());
             }
             for bullet_hit in self
                 .bullets
                 .iter()
-                .filter(|bullet| ship.get_id() != bullet.get_id() && ship.collision(*bullet))
+                .filter(|bullet| ship.get_id() != bullet.get_id() && bullet.collision(ship))
             {
                 death_ids.push(ship.get_id());
                 kill_ids.push(bullet_hit.get_id());
@@ -110,42 +97,61 @@ impl Space {
         }
     }
 
-    pub fn add_planet(&mut self, properties: Properties) -> bool {
-        self.planets.push(Planet::new(properties));
-        true
+    pub fn add_planet(&mut self, object: Object) -> bool {
+        let planet = Planet::new(object);
+        let valid = planet.fit_in(self.size);
+        if valid {
+            self.planets.push(planet);
+        }
+        valid
     }
 
-    pub fn add_ship(&mut self, properties: Properties, ship_config: ShipConfig) -> Option<u8> {
-        let new_id = self.ships.iter().map(|x| x.get_id()).max().unwrap_or(0) + 1;
-        self.ships.push(Ship::new(new_id, properties, ship_config));
-        Some(new_id)
+    pub fn add_ship(&mut self, object: Object, ship_config: ShipConfig) -> Option<u8> {
+        let new_id = self
+            .ships
+            .iter()
+            .map(|ship| ship.get_id())
+            .max()
+            .unwrap_or(0)
+            + 1;
+        let ship = Ship::new(new_id, object, ship_config);
+        let valid = ship.fit_in(self.size);
+        if valid {
+            self.ships.push(ship);
+            Some(new_id)
+        } else {
+            None
+        }
     }
 
     pub fn remove_ship(&mut self, id: u8) -> bool {
         let index = self.get_ship_index(id);
         if let Some(index) = index {
             self.ships.remove(index);
-            return true;
+            true
+        } else {
+            false
         }
-        false
     }
 
     pub fn move_ship(&mut self, id: u8, direction: Option<f64>) -> bool {
         let index = self.get_ship_index(id);
         if let Some(index) = index {
             self.ships[index].change_direction(direction);
-            return true;
+            true
+        } else {
+            false
         }
-        false
     }
 
     pub fn shoot(&mut self, id: u8, direction: f64) -> bool {
         let index = self.get_ship_index(id);
         if let Some(index) = index {
             self.bullets.push(self.ships[index].shoot(direction));
-            return true;
+            true
+        } else {
+            false
         }
-        false
     }
 
     fn get_ship_index(&self, id: u8) -> Option<usize> {
@@ -161,7 +167,7 @@ mod tests {
     fn add_ship_when_no_ships() {
         let mut space = Space::new(DVec2::new(100., 100.));
         let id = space
-            .add_ship(Properties::default(), ShipConfig::default())
+            .add_ship(Object::default(), ShipConfig::default())
             .unwrap();
         assert_eq!(1, id);
         assert_eq!(1, space.ships.len());
@@ -170,9 +176,9 @@ mod tests {
     #[test]
     fn add_ship_when_other_ship_exists() {
         let mut space = Space::new(DVec2::new(100., 100.));
-        space.add_ship(Properties::default(), ShipConfig::default());
+        space.add_ship(Object::default(), ShipConfig::default());
         let id = space
-            .add_ship(Properties::default(), ShipConfig::default())
+            .add_ship(Object::default(), ShipConfig::default())
             .unwrap();
         assert_eq!(2, id);
         assert_eq!(2, space.ships.len());
@@ -182,7 +188,7 @@ mod tests {
     fn remove_existing_ship() {
         let mut space = Space::new(DVec2::new(100., 100.));
         let id = space
-            .add_ship(Properties::default(), ShipConfig::default())
+            .add_ship(Object::default(), ShipConfig::default())
             .unwrap();
         assert!(space.remove_ship(id));
         assert_eq!(0, space.ships.len());
@@ -192,7 +198,7 @@ mod tests {
     fn remove_non_existing_ship() {
         let mut space = Space::new(DVec2::new(100., 100.));
         let id = space
-            .add_ship(Properties::default(), ShipConfig::default())
+            .add_ship(Object::default(), ShipConfig::default())
             .unwrap();
         space.remove_ship(id);
         assert!(!space.remove_ship(id));
@@ -203,7 +209,7 @@ mod tests {
     fn move_existing_ship() {
         let mut space = Space::new(DVec2::new(100., 100.));
         let id = space
-            .add_ship(Properties::default(), ShipConfig::default())
+            .add_ship(Object::default(), ShipConfig::default())
             .unwrap();
         assert!(space.move_ship(id, Some(0.)));
         assert!(space.move_ship(id, None));
@@ -219,7 +225,7 @@ mod tests {
     fn shoot_existing_ship() {
         let mut space = Space::new(DVec2::new(100., 100.));
         let id = space
-            .add_ship(Properties::default(), ShipConfig::default())
+            .add_ship(Object::default(), ShipConfig::default())
             .unwrap();
         assert!(space.shoot(id, 0.));
         assert_eq!(1, space.bullets.len());
