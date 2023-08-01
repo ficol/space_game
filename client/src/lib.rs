@@ -1,14 +1,15 @@
 mod display;
 
-use crossbeam_channel::Sender;
+use std::sync::mpsc::Sender;
+use std::sync::mpsc;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
 use std::thread;
 
-pub fn run(_path: &str, _port: u32) -> Result<(), Box<dyn std::error::Error>> {
-    let stream = TcpStream::connect("0.0.0.0:8888")?;
+pub fn run(ip: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let stream = TcpStream::connect(ip)?;
 
-    let (state_send, state_recv) = crossbeam_channel::unbounded();
+    let (state_send, state_recv) = mpsc::channel();
 
     thread::spawn(move || handle_connection(stream, state_send));
 

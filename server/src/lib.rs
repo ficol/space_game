@@ -3,36 +3,48 @@ mod constants;
 mod object;
 pub mod space;
 
-use crossbeam_channel::{unbounded, Receiver, Sender};
-use space::Space;
+use bus::Bus;
+use std::io::Write;
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc;
 use std::fs;
-use std::net::{SocketAddr, TcpListener};
+use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use connection::handle_connection;
+use space::Space;
 
-pub fn run(path: &str, port: u16) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run(path: &str, addr: &str) -> Result<(), Box<dyn std::error::Error>> {
     let space: Space = serde_json::from_slice(&fs::read(path)?)?;
     let space_counter = Arc::new(Mutex::new(space));
 
-    let (command_sender, command_receiver) = unbounded();
     let update_counter = Arc::clone(&space_counter);
+    let (command_sender, command_receiver) = mpsc::channel();
     thread::spawn(move || run_game(&update_counter, command_receiver));
 
-    let (state_sender, state_receiver) = unbounded();
-    let state_counter = Arc::clone(&space_counter);
-    thread::spawn(move || run_state_send(&state_counter, state_sender));
+    let state_bus = Arc::new(Mutex::new(Bus::new(constants::MAX_PLAYERS)));
 
-    let listener = TcpListener::bind(SocketAddr::new(constants::IP, port))?;
+    let space_counter = Arc::clone(&space_counter);
+    let broadcast = Arc::clone(&state_bus);
+    thread::spawn(move || run_state_send(&space_counter, &broadcast));
+
+    let listener = TcpListener::bind(addr)?;
 
     println!("listening started, ready to accept");
 
-    let mut handles = Vec::with_capacity(5);
-    for stream in listener.incoming().take(5).flatten() {
-        let state_receiver = state_receiver.clone();
+    let mut handles: Vec<JoinHandle<_>> = Vec::with_capacity(constants::MAX_PLAYERS);
+    for mut stream in listener.incoming().flatten() {
+        handles.retain(|handle| !handle.is_finished());
+        if handles.len() >= constants::MAX_PLAYERS {
+            let _ = stream.write_all(b"too many players%");
+            let _ = stream.shutdown(std::net::Shutdown::Both);
+            continue;
+        }
+
         let command_sender = command_sender.clone();
+        let state_receiver = state_bus.lock().unwrap().add_rx();
         handles.push(thread::spawn(move || {
             handle_connection(stream, state_receiver, command_sender);
         }));
@@ -56,14 +68,14 @@ fn run_game(space_counter: &Arc<Mutex<Space>>, command_receiver: Receiver<Vec<u8
     }
 }
 
-fn run_state_send(space_counter: &Arc<Mutex<Space>>, state_sender: Sender<Vec<u8>>) {
+fn run_state_send(space_counter: &Arc<Mutex<Space>>, state_sender: &Arc<Mutex<Bus<Vec<u8>>>>) {
     loop {
         let state;
         {
             let space = space_counter.lock().unwrap();
             state = space.get_state().unwrap();
         }
-        state_sender.send(state).unwrap();
+        state_sender.lock().unwrap().broadcast(state);
         std::thread::sleep(Duration::from_secs_f64(constants::GAME_STATE_TICK_SECONDS));
     }
 }

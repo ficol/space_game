@@ -1,4 +1,4 @@
-use crossbeam_channel::Receiver;
+use std::sync::mpsc::Receiver;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;

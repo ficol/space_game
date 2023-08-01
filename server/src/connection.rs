@@ -1,10 +1,11 @@
-use crossbeam_channel::{Receiver, Sender};
+use bus::BusReader;
+use std::sync::mpsc::Sender;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
 
 pub fn handle_connection(
     mut stream: TcpStream,
-    state_receiver: Receiver<Vec<u8>>,
+    mut state_receiver: BusReader<Vec<u8>>,
     command_sender: Sender<Vec<u8>>,
 ) {
     loop {

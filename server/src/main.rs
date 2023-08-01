@@ -5,18 +5,18 @@ use clap::Parser;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to json file with map configuration
-    #[arg(long, default_value_t = String::from("maps/example.json"))]
+    #[arg(short, long, default_value_t = String::from("maps/example.json"))]
     path: String,
 
-    /// Port to bind server
-    #[arg(long, default_value_t = 8888)]
-    port: u16,
+    /// Ip address to bind
+    #[arg(short, long, default_value_t = String::from("0.0.0.0:8888"))]
+    addr: String,
 }
 
 fn main() {
     let args = Args::parse();
 
-    if let Err(e) = server::run(&args.path, args.port) {
+    if let Err(e) = server::run(&args.path, &args.addr) {
         eprintln!("Server error: {e}");
         std::process::exit(1);
     }

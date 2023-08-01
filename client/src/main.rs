@@ -4,19 +4,15 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Path to ip
-    #[arg(long, default_value_t = String::from("127.0.0.1"))]
-    ip: String,
-
-    /// Port to bind server
-    #[arg(long, default_value_t = 8888)]
-    port: u32,
+    /// Ip address to bind
+    #[arg(long, default_value_t = String::from("127.0.0.1:8888"))]
+    addr: String,
 }
 
 fn main() {
     let args = Args::parse();
 
-    if let Err(e) = client::run(&args.ip, args.port) {
+    if let Err(e) = client::run(&args.addr) {
         eprintln!("Client error: {e}");
         std::process::exit(1);
     }
