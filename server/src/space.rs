@@ -12,7 +12,6 @@ pub struct Space {
     bullets: Vec<object::Bullet>,
 }
 
-#[allow(dead_code)]
 impl Space {
     pub fn new(size: DVec2) -> Space {
         Space {
@@ -21,6 +20,21 @@ impl Space {
             ships: vec![],
             bullets: vec![],
         }
+    }
+
+    //tmp
+    pub fn get_params(&self) -> Vec<(f64, f64, f64)> {
+        let mut locations = Vec::new();
+        for planet in self.planets.iter() {
+            locations.push(planet.get_params());
+        }
+        for ship in self.ships.iter() {
+            locations.push(ship.get_params());
+        }
+        for bullet in self.bullets.iter() {
+            locations.push(bullet.get_params());
+        }
+        locations
     }
 
     pub fn get_state(&self) -> Result<Vec<u8>, serde_json::Error> {

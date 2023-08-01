@@ -1,24 +1,32 @@
 mod display;
 
-use std::io::{BufRead, BufReader};
+use crossbeam_channel::Sender;
+use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
-
-//use display::print_game;
+use std::thread;
 
 pub fn run(_path: &str, _port: u32) -> Result<(), Box<dyn std::error::Error>> {
-    let stream = TcpStream::connect("127.0.0.1:8888")?;
+    let stream = TcpStream::connect("0.0.0.0:8888")?;
 
-    handle_connection(stream);
+    let (state_send, state_recv) = crossbeam_channel::unbounded();
 
-    Ok(())
+    thread::spawn(move || handle_connection(stream, state_send));
+
+    display::print_game(state_recv)
 }
 
-fn handle_connection(mut stream: TcpStream) {
+fn handle_connection(mut stream: TcpStream, state_sender: Sender<Vec<u8>>) {
+    // TODO
     loop {
         let mut buf_reader = BufReader::new(&mut stream);
-        let mut line = Vec::new();
-        buf_reader.read_until(b'%', &mut line).unwrap();
-
-        println!("Response: {:?}", String::from_utf8(line));
+        let mut msg = Vec::new();
+        buf_reader.read_until(b'%', &mut msg).unwrap();
+        if state_sender.send(msg).is_err() {
+            break;
+        }
+        let response_msg = b"Client%";
+        if stream.write_all(response_msg).is_err() {
+            break;
+        }
     }
 }

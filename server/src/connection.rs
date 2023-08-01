@@ -1,34 +1,24 @@
-use std::io::Write;
-use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
+use crossbeam_channel::{Receiver, Sender};
+use std::io::{BufRead, BufReader, Write};
+use std::net::TcpStream;
 
-use crate::space::Space;
-
-pub fn run_connection(space_mutex: &Arc<Mutex<Space>>, _port: u32) {
-    let listener = TcpListener::bind("127.0.0.1:8888").unwrap();
-
-    println!("listening started, ready to accept");
-
-    for stream in listener.incoming() {
-        let connection_mutex = Arc::clone(space_mutex);
-        thread::spawn(move || handle_connection(stream.unwrap(), &connection_mutex).expect("Aaa"));
-    }
-}
-
-fn handle_connection(
+pub fn handle_connection(
     mut stream: TcpStream,
-    space_mutex: &Arc<Mutex<Space>>,
-) -> Result<(), Box<dyn std::error::Error>> {
+    state_receiver: Receiver<Vec<u8>>,
+    command_sender: Sender<Vec<u8>>,
+) {
     loop {
-        std::thread::sleep(Duration::new(1, 1_000_000_000u32 / 60));
-        let mut state;
-        {
-            let space = space_mutex.lock().unwrap();
-            state = space.get_state()?;
+        //TODO
+        let mut state_msg = state_receiver.recv().unwrap();
+        state_msg.push(b'%');
+        if stream.write_all(&state_msg).is_err() {
+            break;
         }
-        state.push(b'%');
-        stream.write_all(&state)?;
+        let mut buf_reader = BufReader::new(&mut stream);
+        let mut command_msg = Vec::new();
+        if buf_reader.read_until(b'%', &mut command_msg).is_err() {
+            break;
+        }
+        command_sender.send(command_msg).unwrap();
     }
 }

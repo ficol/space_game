@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 sdl2 = "0.35.2"
 clap = { version = "4.3.19", features = ["derive"] }
+crossbeam-channel = "0.5.8"

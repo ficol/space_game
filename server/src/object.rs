@@ -32,7 +32,6 @@ pub struct Object {
     acceleration: DVec2,
 }
 
-#[allow(dead_code)]
 impl Object {
     pub fn new(location: DVec2, radius: f64, mass: f64, velocity: DVec2) -> Object {
         Object {
@@ -72,6 +71,11 @@ impl Object {
     fn fit_in(&self, size: DVec2) -> bool {
         self.location.cmple(size).all()
     }
+
+    //tmp
+    fn get_params(&self) -> (f64, f64, f64) {
+        (self.location.x, self.location.y, self.radius)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -89,10 +93,14 @@ impl Update for Planet {
     }
 }
 
-#[allow(dead_code)]
 impl Planet {
     pub fn new(object: Object) -> Self {
         Planet { object }
+    }
+
+    //tmp
+    pub fn get_params(&self) -> (f64, f64, f64) {
+        self.object.get_params()
     }
 }
 
@@ -104,7 +112,6 @@ pub struct ShipConfig {
     force: f64,
 }
 
-#[allow(dead_code)]
 impl ShipConfig {
     pub fn new(bullet_speed: f64, bullet_radius: f64, bullet_mass: f64, force: f64) -> ShipConfig {
         ShipConfig {
@@ -141,7 +148,6 @@ impl Update for Ship {
     }
 }
 
-#[allow(dead_code)]
 impl Ship {
     pub fn new(id: u8, object: Object, ship_config: ShipConfig) -> Self {
         Ship {
@@ -182,6 +188,11 @@ impl Ship {
     pub fn change_direction(&mut self, direction: Option<f64>) {
         self.direction = direction;
     }
+
+    //tmp
+    pub fn get_params(&self) -> (f64, f64, f64) {
+        self.object.get_params()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -208,6 +219,11 @@ impl Bullet {
 
     pub fn get_id(&self) -> u8 {
         self.id
+    }
+
+    //tmp
+    pub fn get_params(&self) -> (f64, f64, f64) {
+        self.object.get_params()
     }
 }
 

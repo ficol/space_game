@@ -10,7 +10,7 @@ struct Args {
 
     /// Port to bind server
     #[arg(long, default_value_t = 8888)]
-    port: u32,
+    port: u16,
 }
 
 fn main() {
