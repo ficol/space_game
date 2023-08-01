@@ -7,12 +7,14 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
+use server::space::Space;
+
 pub fn print_game(state_recv: Receiver<Vec<u8>>) -> Result<(), Box<dyn std::error::Error>> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
     let window = video_subsystem
-        .window("rust-sdl2 demo: Video", 1000, 1000)
+        .window("Space Game", 1000, 1000)
         .position_centered()
         .opengl()
         .build()
@@ -37,14 +39,22 @@ pub fn print_game(state_recv: Receiver<Vec<u8>>) -> Result<(), Box<dyn std::erro
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
 
-        if let Ok(msg) = state_recv.recv() {
-            println!("{}", String::from_utf8(msg).unwrap()); //TODO
+        let space: Space;
+        if let Ok(mut msg) = state_recv.recv() {
+            msg.pop();
+            let x = bincode::deserialize(&msg);
+            if x.is_err() {
+                continue;
+            }
+            space = x.unwrap();
         } else {
             break;
         }
 
         canvas.set_draw_color(Color::WHITE);
-        draw_dot(&mut canvas, 10_i32, 10_i32, 10)?;
+        for (x, y, radius) in space.get_params().iter() {
+            draw_dot(&mut canvas, *x as i32, *y as i32, *radius as u32 * 10)?;
+        }
         canvas.present();
     }
 

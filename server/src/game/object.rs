@@ -18,6 +18,10 @@ pub trait Update {
         self.object().fit_in(size)
     }
 
+    fn get_params(&self) -> (f64, f64, f64) {
+        self.object().get_params()
+    }
+
     fn object(&self) -> &Object;
 
     fn object_mut(&mut self) -> &mut Object;
@@ -32,6 +36,7 @@ pub struct Object {
     acceleration: DVec2,
 }
 
+#[allow(dead_code)]
 impl Object {
     pub fn new(location: DVec2, radius: f64, mass: f64, velocity: DVec2) -> Object {
         Object {
@@ -72,7 +77,6 @@ impl Object {
         self.location.cmple(size).all()
     }
 
-    //tmp
     fn get_params(&self) -> (f64, f64, f64) {
         (self.location.x, self.location.y, self.radius)
     }
@@ -97,11 +101,6 @@ impl Planet {
     pub fn new(object: Object) -> Self {
         Planet { object }
     }
-
-    //tmp
-    pub fn get_params(&self) -> (f64, f64, f64) {
-        self.object.get_params()
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -112,6 +111,7 @@ pub struct ShipConfig {
     force: f64,
 }
 
+#[allow(dead_code)]
 impl ShipConfig {
     pub fn new(bullet_speed: f64, bullet_radius: f64, bullet_mass: f64, force: f64) -> ShipConfig {
         ShipConfig {
@@ -160,16 +160,16 @@ impl Ship {
     }
 
     pub fn shoot(&self, direction: f64) -> Bullet {
-        Bullet {
-            id: self.id,
-            object: Object {
+        Bullet::new(
+            self.id,
+            Object {
                 radius: self.ship_config.bullet_radius,
                 mass: self.ship_config.bullet_mass,
                 velocity: DVec2::from_angle(direction) * self.ship_config.bullet_speed,
                 acceleration: DVec2::ZERO,
                 ..self.object
             },
-        }
+        )
     }
 
     pub fn respawn(&mut self, new_location: DVec2) {
@@ -187,11 +187,6 @@ impl Ship {
 
     pub fn change_direction(&mut self, direction: Option<f64>) {
         self.direction = direction;
-    }
-
-    //tmp
-    pub fn get_params(&self) -> (f64, f64, f64) {
-        self.object.get_params()
     }
 }
 
@@ -211,7 +206,6 @@ impl Update for Bullet {
     }
 }
 
-#[allow(dead_code)]
 impl Bullet {
     pub fn new(id: u8, object: Object) -> Self {
         Bullet { id, object }
@@ -219,11 +213,6 @@ impl Bullet {
 
     pub fn get_id(&self) -> u8 {
         self.id
-    }
-
-    //tmp
-    pub fn get_params(&self) -> (f64, f64, f64) {
-        self.object.get_params()
     }
 }
 

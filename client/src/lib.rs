@@ -1,9 +1,9 @@
 mod display;
 
-use std::sync::mpsc::Sender;
-use std::sync::mpsc;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
+use std::sync::mpsc;
+use std::sync::mpsc::Sender;
 use std::thread;
 
 pub fn run(ip: &str) -> Result<(), Box<dyn std::error::Error>> {
