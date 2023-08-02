@@ -1,8 +1,9 @@
-mod communication;
 mod constants;
-mod game;
+mod logic;
+mod networking;
+mod ui;
 
-pub use game::space;
+pub use ui::display::display_game;
 
 use bus::Bus;
 use std::fs;
@@ -10,8 +11,9 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use communication::connection::{handle_listen, run_game, run_state_send};
-use game::space::Space;
+use logic::space::Space;
+use logic::update::{run_game, run_state_send};
+use networking::connection::handle_listen;
 
 pub fn run(path: &str, addr: &str) -> Result<(), Box<dyn std::error::Error>> {
     // create space
@@ -29,6 +31,7 @@ pub fn run(path: &str, addr: &str) -> Result<(), Box<dyn std::error::Error>> {
     let broadcast = Arc::clone(&state_bus);
     let state_handle = thread::spawn(move || run_state_send(&space_counter, &broadcast));
 
+    // listen for new connections
     handle_listen(addr, command_sender, &state_bus)?;
 
     update_handle.join().unwrap();

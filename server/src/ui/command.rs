@@ -1,9 +1,10 @@
-use crate::game::{
+use crate::logic::{
     object::{Object, ShipConfig},
     space::Space,
 };
 
 pub fn run_command(space: &mut Space, command: Vec<u8>) {
+    // TODO HANDLE COMMANDS
     match command[..] {
         [2] => space.add_planet(Object::default()),
         [3] => space.add_ship(1, Object::default(), ShipConfig::default()),

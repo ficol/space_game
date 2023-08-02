@@ -2,20 +2,19 @@ use glam::DVec2;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use super::object;
-use super::object::{Object, Planet, Ship, ShipConfig, Update};
+use super::object::{Bullet, Object, Planet, Ship, ShipConfig, Update};
+use crate::ui::display::DisplayInfo;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Space {
     size: DVec2,
-    planets: Vec<object::Planet>,
-    ships: Vec<object::Ship>,
-    bullets: Vec<object::Bullet>,
+    planets: Vec<Planet>,
+    ships: Vec<Ship>,
+    bullets: Vec<Bullet>,
 }
 
-#[allow(dead_code)]
 impl Space {
-    pub(crate) fn new(size: DVec2) -> Space {
+    pub fn new(size: DVec2) -> Space {
         Space {
             size,
             planets: vec![],
@@ -24,19 +23,25 @@ impl Space {
         }
     }
 
-    pub(crate) fn get_state(&self) -> Vec<u8> {
+    pub fn get_state(&self) -> Vec<u8> {
         bincode::serialize(&self).unwrap()
     }
 
-    pub fn get_params(&self) -> Vec<(f64, f64, f64)> {
-        let mut params = Vec::new();
+    pub fn get_display_info(&self) -> Vec<DisplayInfo> {
+        let mut display_infos = Vec::new();
         for planet in self.planets.iter() {
-            params.push(planet.get_params());
+            display_infos.push(planet.get_display_info(self.size));
         }
-        params
+        for ship in self.ships.iter() {
+            display_infos.push(ship.get_display_info(self.size));
+        }
+        for bullet in self.bullets.iter() {
+            display_infos.push(bullet.get_display_info(self.size));
+        }
+        display_infos
     }
 
-    pub(crate) fn update(&mut self, time: f64) {
+    pub fn update(&mut self, time: f64) {
         self.update_planets(time);
         self.update_bullets(time);
         self.update_ships(time);
@@ -106,34 +111,34 @@ impl Space {
         }
     }
 
-    pub(crate) fn add_planet(&mut self, object: Object) {
+    pub fn add_planet(&mut self, object: Object) {
         let planet = Planet::new(object);
         if planet.fit_in(self.size) {
             self.planets.push(planet);
         }
     }
 
-    pub(crate) fn add_ship(&mut self, id: u8, object: Object, ship_config: ShipConfig) {
+    pub fn add_ship(&mut self, id: u8, object: Object, ship_config: ShipConfig) {
         if self.ships.iter().all(|ship| ship.get_id() != id) {
             self.ships.push(Ship::new(id, object, ship_config));
         }
     }
 
-    pub(crate) fn remove_ship(&mut self, id: u8) {
+    pub fn remove_ship(&mut self, id: u8) {
         let index = self.get_ship_index(id);
         if let Some(index) = index {
             self.ships.remove(index);
         }
     }
 
-    pub(crate) fn move_ship(&mut self, id: u8, direction: Option<f64>) {
+    pub fn move_ship(&mut self, id: u8, direction: Option<f64>) {
         let index = self.get_ship_index(id);
         if let Some(index) = index {
             self.ships[index].change_direction(direction);
         }
     }
 
-    pub(crate) fn shoot(&mut self, id: u8, direction: f64) {
+    pub fn shoot(&mut self, id: u8, direction: f64) {
         let index = self.get_ship_index(id);
         if let Some(index) = index {
             self.bullets.push(self.ships[index].shoot(direction));
