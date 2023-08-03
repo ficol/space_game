@@ -1,11 +1,9 @@
 use glam::f64::DVec2;
 use serde::{Deserialize, Serialize};
 
-use crate::ui::display::{DisplayInfo, DisplayType};
-
 pub trait Update {
-    fn update(&mut self, time: f64, total_field: DVec2, size: DVec2) {
-        self.object_mut().update(time, total_field, size);
+    fn update(&mut self, time: f64, total_field: DVec2) {
+        self.object_mut().update(time, total_field);
     }
 
     fn collision(&self, other: &impl Update) -> bool {
@@ -16,8 +14,8 @@ pub trait Update {
         self.object().get_field(other.object())
     }
 
-    fn fit_in(&self, size: DVec2) -> bool {
-        self.object().fit_in(size)
+    fn in_space(&self) -> bool {
+        self.object().in_space()
     }
 
     fn object(&self) -> &Object;
@@ -27,11 +25,11 @@ pub trait Update {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Object {
-    location: DVec2,
-    radius: f64,
-    mass: f64,
-    velocity: DVec2,
-    acceleration: DVec2,
+    pub location: DVec2,
+    pub radius: f64,
+    pub mass: f64,
+    pub velocity: DVec2,
+    pub acceleration: DVec2,
 }
 
 impl Object {
@@ -45,13 +43,13 @@ impl Object {
         }
     }
 
-    fn update(&mut self, time: f64, total_field: DVec2, size: DVec2) {
-        self.location += self.velocity * time;
-        self.velocity += self.acceleration * time;
+    fn update(&mut self, time: f64, total_field: DVec2) {
         if self.mass != 0. {
             self.acceleration = total_field / self.mass;
         }
-        self.bound(size);
+        self.velocity += self.acceleration * time;
+        self.location += self.velocity * time;
+        self.bound();
     }
 
     fn collision(&self, other: &Self) -> bool {
@@ -66,183 +64,20 @@ impl Object {
         (other.location - self.location).normalize() * value
     }
 
-    fn bound(&mut self, size: DVec2) {
-        if self.location.x < 0. || self.location.x > size.x {
+    fn bound(&mut self) {
+        if self.location.x < 0. || self.location.x > 1. {
             self.velocity.x = 0.;
             self.acceleration.x = 0.;
         }
-        if self.location.y < 0. || self.location.x > size.y {
+        if self.location.y < 0. || self.location.x > 1. {
             self.velocity.y = 0.;
             self.acceleration.y = 0.;
         }
-        self.location = self.location.clamp(DVec2::ZERO, size);
+        self.location = self.location.clamp(DVec2::ZERO, DVec2::new(1., 1.));
     }
 
-    fn fit_in(&self, size: DVec2) -> bool {
-        self.location.cmple(size).all()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Planet {
-    object: Object,
-}
-
-impl Update for Planet {
-    fn object(&self) -> &Object {
-        &self.object
-    }
-
-    fn object_mut(&mut self) -> &mut Object {
-        &mut self.object
-    }
-}
-
-impl Planet {
-    pub fn new(object: Object) -> Self {
-        Planet { object }
-    }
-
-    pub fn get_display_info(&self, size: DVec2) -> DisplayInfo {
-        DisplayInfo {
-            display_type: DisplayType::Planet,
-            id: None,
-            x: self.object.location.x / size.x,
-            y: self.object.location.y / size.y,
-            radius: self.object.radius,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct ShipConfig {
-    bullet_speed: f64,
-    bullet_radius: f64,
-    bullet_mass: f64,
-    force: f64,
-}
-
-impl ShipConfig {
-    pub fn new(bullet_speed: f64, bullet_radius: f64, bullet_mass: f64, force: f64) -> ShipConfig {
-        ShipConfig {
-            bullet_speed,
-            bullet_radius,
-            bullet_mass,
-            force,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-struct Score {
-    kills: u32,
-    deaths: u32,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Ship {
-    id: u8,
-    object: Object,
-    direction: Option<f64>,
-    ship_config: ShipConfig,
-    score: Score,
-}
-
-impl Update for Ship {
-    fn object(&self) -> &Object {
-        &self.object
-    }
-
-    fn object_mut(&mut self) -> &mut Object {
-        &mut self.object
-    }
-}
-
-impl Ship {
-    pub fn new(id: u8, object: Object, ship_config: ShipConfig) -> Self {
-        Ship {
-            id,
-            object,
-            direction: None,
-            ship_config,
-            score: Score::default(),
-        }
-    }
-
-    pub fn shoot(&self, direction: f64) -> Bullet {
-        Bullet::new(
-            self.id,
-            Object {
-                radius: self.ship_config.bullet_radius,
-                mass: self.ship_config.bullet_mass,
-                velocity: DVec2::from_angle(direction) * self.ship_config.bullet_speed,
-                acceleration: DVec2::ZERO,
-                ..self.object
-            },
-        )
-    }
-
-    pub fn respawn(&mut self, new_location: DVec2) {
-        self.score.deaths += 1;
-        self.object.location = new_location;
-    }
-
-    pub fn kill(&mut self) {
-        self.score.kills += 1;
-    }
-
-    pub fn get_id(&self) -> u8 {
-        self.id
-    }
-
-    pub fn change_direction(&mut self, direction: Option<f64>) {
-        self.direction = direction;
-    }
-
-    pub fn get_display_info(&self, size: DVec2) -> DisplayInfo {
-        DisplayInfo {
-            display_type: DisplayType::Ship,
-            id: Some(self.id),
-            x: self.object.location.x / size.x,
-            y: self.object.location.y / size.y,
-            radius: self.object.radius,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Bullet {
-    id: u8,
-    object: Object,
-}
-
-impl Update for Bullet {
-    fn object(&self) -> &Object {
-        &self.object
-    }
-
-    fn object_mut(&mut self) -> &mut Object {
-        &mut self.object
-    }
-}
-
-impl Bullet {
-    pub fn new(id: u8, object: Object) -> Self {
-        Bullet { id, object }
-    }
-
-    pub fn get_id(&self) -> u8 {
-        self.id
-    }
-
-    pub fn get_display_info(&self, size: DVec2) -> DisplayInfo {
-        DisplayInfo {
-            display_type: DisplayType::Bullet,
-            id: Some(self.id),
-            x: self.object.location.x / size.x,
-            y: self.object.location.y / size.y,
-            radius: self.object.radius,
-        }
+    fn in_space(&self) -> bool {
+        self.location.max_element() < 1. && self.location.min_element() > 0.
     }
 }
 
@@ -260,68 +95,56 @@ mod tests {
 
     #[test]
     fn no_collision_of_two_objects() {
-        let object1 = Object::new(DVec2::new(0., 0.), 1., 0., DVec2::ZERO);
-        let planet1 = Planet::new(object1);
-        let object2 = Object::new(DVec2::new(2., 2.), 1., 0., DVec2::ZERO);
-        let bullet2 = Bullet::new(1, object2);
-        assert!(!planet1.collision(&bullet2));
+        let object1 = Object::new(DVec2::new(0., 0.), 0.1, 0., DVec2::ZERO);
+        let object2 = Object::new(DVec2::new(0.2, 0.2), 0.1, 0., DVec2::ZERO);
+        assert!(!object1.collision(&object2));
     }
 
     #[test]
     fn collision_of_two_objects() {
         let object1 = Object::new(DVec2::new(0., 0.), 1., 0., DVec2::ZERO);
-        let bullet1 = Bullet::new(4, object1);
         let object2 = Object::new(DVec2::new(1., 1.), 1., 0., DVec2::ZERO);
-        let ship2 = Ship::new(6, object2, ShipConfig::default());
-        assert!(bullet1.collision(&ship2));
+        assert!(object1.collision(&object2));
     }
 
     #[test]
     fn update_object_location_no_mass() {
-        let object = Object::new(DVec2::new(0., 0.), 1., 0., DVec2::new(1., 0.));
-        let mut planet = Planet::new(object);
-        planet.update(1., DVec2::new(0., 1.), DVec2::MAX);
-        assert!(planet.object.velocity.is_finite());
-        assert_vectors!(DVec2::new(1., 0.), planet.object.location, 1e-6);
+        let mut object = Object::new(DVec2::ZERO, 1., 0., DVec2::new(0.1, 0.));
+        object.update(1., DVec2::new(0., 1.));
+        assert!(object.velocity.is_finite());
+        assert_vectors!(DVec2::new(0.1, 0.), object.location, 1e-6);
     }
 
     #[test]
     fn update_accelerated_object_location() {
-        let object = Object::new(DVec2::new(0., 0.), 1., 1., DVec2::ZERO);
-        let mut bullet = Bullet::new(4, object);
-        bullet.update(0., DVec2::new(0., 1.), DVec2::MAX); //set acceleration
-        bullet.update(1., DVec2::new(0., 1.), DVec2::MAX); //gain velocity
-        bullet.update(1., DVec2::new(0., 1.), DVec2::MAX); //change location
-        assert_vectors!(DVec2::new(0., 1.), bullet.object.location, 1e-6);
+        let mut object = Object::new(DVec2::new(0., 0.), 1., 1., DVec2::ZERO);
+        object.update(1., DVec2::new(0., 0.1)); //change location
+        assert_vectors!(DVec2::new(0., 0.1), object.location, 1e-6);
     }
 
     #[test]
     fn calculate_field() {
         let object1 = Object::new(DVec2::new(0., 0.), 1., 1., DVec2::ZERO);
-        let ship1 = Ship::new(12, object1, ShipConfig::default());
         let object2 = Object::new(DVec2::new(0., 1.), 1., 2., DVec2::ZERO);
-        let planet2 = Planet::new(object2);
-        let field = ship1.get_field(&planet2);
+        let field = object1.get_field(&object2);
         assert_vectors!(DVec2::new(0., 2.), field, 1e-6);
     }
 
     #[test]
     fn bound_max() {
-        let object = Object::new(DVec2::new(100., 80.), 1., 1., DVec2::new(10., 10.));
-        let mut planet = Planet::new(object);
-        planet.update(0., DVec2::ZERO, DVec2::new(50., 40.));
-        assert_vectors!(DVec2::new(50., 40.), planet.object.location, 1e-6);
-        assert_vectors!(DVec2::ZERO, planet.object.velocity, 1e-6);
-        assert_vectors!(DVec2::ZERO, planet.object.acceleration, 1e-6);
+        let mut object = Object::new(DVec2::new(100., 80.), 1., 1., DVec2::new(10., 10.));
+        object.update(0., DVec2::ZERO);
+        assert_vectors!(DVec2::new(1., 1.), object.location, 1e-6);
+        assert_vectors!(DVec2::ZERO, object.velocity, 1e-6);
+        assert_vectors!(DVec2::ZERO, object.acceleration, 1e-6);
     }
 
     #[test]
     fn bound_min() {
-        let object = Object::new(DVec2::new(-10., -20.), 1., 1., DVec2::new(-10., -10.));
-        let mut ship = Ship::new(12, object, ShipConfig::default());
-        ship.update(0., DVec2::ZERO, DVec2::new(50., 40.));
-        assert_vectors!(DVec2::ZERO, ship.object.location, 1e-6);
-        assert_vectors!(DVec2::ZERO, ship.object.velocity, 1e-6);
-        assert_vectors!(DVec2::ZERO, ship.object.acceleration, 1e-6);
+        let mut object = Object::new(DVec2::new(-10., -20.), 1., 1., DVec2::new(-10., -10.));
+        object.update(0., DVec2::ZERO);
+        assert_vectors!(DVec2::ZERO, object.location, 1e-6);
+        assert_vectors!(DVec2::ZERO, object.velocity, 1e-6);
+        assert_vectors!(DVec2::ZERO, object.acceleration, 1e-6);
     }
 }

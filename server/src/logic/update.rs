@@ -23,7 +23,7 @@ pub fn run_state_send(space_counter: &Arc<Mutex<Space>>, state_sender: &Arc<Mute
         let state;
         {
             let space: std::sync::MutexGuard<'_, Space> = space_counter.lock().unwrap();
-            state = space.get_state();
+            state = space.get_state_binary();
         }
         state_sender.lock().unwrap().broadcast(state);
         std::thread::sleep(Duration::from_secs_f64(constants::GAME_STATE_TICK_SECONDS));

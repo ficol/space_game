@@ -9,6 +9,9 @@ use sdl2::video::Window;
 
 use crate::logic::space::Space;
 
+const WIDTH: u32 = 1000;
+const HEIGHT: u32 = 1000;
+
 pub enum DisplayType {
     Planet,
     Ship,
@@ -23,12 +26,30 @@ pub struct DisplayInfo {
     pub radius: f64,
 }
 
+pub trait Drawable {
+    fn get_display_info(&self) -> DisplayInfo;
+    fn draw(&self, canvas: &mut Canvas<Window>) -> Result<(), String> {
+        let display_info = self.get_display_info();
+        match display_info.display_type {
+            DisplayType::Planet => canvas.set_draw_color(Color::RED),
+            DisplayType::Ship => canvas.set_draw_color(Color::BLUE),
+            DisplayType::Bullet => canvas.set_draw_color(Color::WHITE),
+        }
+        draw_circle(
+            canvas,
+            Point::new(
+                (display_info.x * WIDTH as f64) as i32,
+                (display_info.y * HEIGHT as f64) as i32,
+            ),
+            display_info.radius as i32,
+        )
+    }
+}
+
 pub fn display_game(
     state_recv: Receiver<Vec<u8>>,
-    command_send: Sender<Vec<u8>>,
+    _command_send: Sender<Vec<u8>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    const WIDTH: u32 = 1000;
-    const HEIGHT: u32 = 1000;
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
@@ -62,21 +83,7 @@ pub fn display_game(
         let msg = state_recv.recv().unwrap();
         let space: Space = bincode::deserialize(&msg).unwrap();
 
-        for display_info in space.get_display_info().iter() {
-            match display_info.display_type {
-                DisplayType::Planet => canvas.set_draw_color(Color::RED),
-                DisplayType::Ship => canvas.set_draw_color(Color::BLUE),
-                DisplayType::Bullet => canvas.set_draw_color(Color::WHITE),
-            }
-            draw_circle(
-                &mut canvas,
-                Point::new(
-                    (display_info.x * WIDTH as f64) as i32,
-                    (display_info.y * HEIGHT as f64) as i32,
-                ),
-                display_info.radius as i32,
-            )?;
-        }
+        space.draw_all(&mut canvas)?;
         canvas.present();
     }
 

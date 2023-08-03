@@ -20,7 +20,7 @@ pub fn run(ip: &str) -> Result<(), Box<dyn std::error::Error>> {
 fn handle_connection<T: Write + Read>(
     mut stream: T,
     state_sender: Sender<Vec<u8>>,
-    command_receiver: Receiver<Vec<u8>>,
+    _command_receiver: Receiver<Vec<u8>>,
 ) {
     loop {
         let mut buf_reader = BufReader::new(&mut stream);
