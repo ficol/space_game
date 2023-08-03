@@ -1,6 +1,6 @@
 use bus::{Bus, BusReader};
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufReader, Read, Write};
 use std::net::TcpListener;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
@@ -59,6 +59,7 @@ fn init_connection(
 }
 
 fn handle_connection<T: Write + Read>(id: u8, mut client: Client<T>) {
+    client.command_sender.send(vec![0, id]).unwrap();
     loop {
         let mut state_msg = client.state_receiver.recv().unwrap();
         while let Ok(msg) = client.state_receiver.try_recv() {
@@ -66,17 +67,21 @@ fn handle_connection<T: Write + Read>(id: u8, mut client: Client<T>) {
         }
         let mut msg = u32::to_be_bytes(state_msg.len() as u32).to_vec();
         msg.append(&mut state_msg);
-        if client.stream.write_all(&msg).is_err() {
-            break;
-        }
+        client.stream.write_all(&msg).unwrap();
 
         let mut buf_reader = BufReader::new(&mut client.stream);
-        let mut command_msg = Vec::new();
-        if buf_reader.read_until(0x04, &mut command_msg).is_err() {
-            // TODO CATCH COMMANDS
+        let mut command_buf = [0_u8; 18];
+        if buf_reader.read_exact(&mut command_buf).is_err() {
             break;
         }
-        command_msg.push(id + 48);
-        client.command_sender.send(command_msg).unwrap();
+        let mut move_msg = vec![2, id];
+        move_msg.append(&mut command_buf[..9].to_vec());
+        client.command_sender.send(move_msg).unwrap();
+        if command_buf[9] != 0 {
+            let mut shoot_msg = vec![id, 1];
+            shoot_msg.append(&mut command_buf[9..18].to_vec());
+            client.command_sender.send(shoot_msg).unwrap();
+        }
     }
+    client.command_sender.send(vec![1, id]).unwrap();
 }

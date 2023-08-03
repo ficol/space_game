@@ -3,6 +3,7 @@ mod logic;
 mod networking;
 mod ui;
 
+pub use logic::space::Space;
 pub use ui::display::display_game;
 
 use bus::Bus;
@@ -11,7 +12,6 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use logic::space::Space;
 use logic::update::{run_game, run_state_send};
 use networking::connection::handle_listen;
 

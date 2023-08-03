@@ -20,7 +20,7 @@ pub fn run(ip: &str) -> Result<(), Box<dyn std::error::Error>> {
 fn handle_connection<T: Write + Read>(
     mut stream: T,
     state_sender: Sender<Vec<u8>>,
-    _command_receiver: Receiver<Vec<u8>>,
+    command_receiver: Receiver<Vec<u8>>,
 ) {
     loop {
         let mut buf_reader = BufReader::new(&mut stream);
@@ -29,20 +29,11 @@ fn handle_connection<T: Write + Read>(
         let mut msg_buf = buf_reader.take(u32::from_be_bytes(length_bytes) as u64);
         let mut msg = Vec::new();
         msg_buf.read_to_end(&mut msg).unwrap();
-        if state_sender.send(msg).is_err() {
-            break;
+        state_sender.send(msg).unwrap();
+        let mut response_msg = command_receiver.recv().unwrap();
+        while let Ok(msg) = command_receiver.try_recv() {
+            response_msg = msg;
         }
-        let response_msg = [0x04]; // TODO SEND COMMANDS
-        if stream.write_all(&response_msg).is_err() {
-            break;
-        }
-        // if let Ok(command) = command_receiver.try_recv().unwrap() {
-        //     length_bytes = u32::to_be_bytes(command.len() as u32);
-        //     let mut response_msg =
-        //     let response_msg = [constants::MSG_END];
-        //     if stream.write_all(&response_msg).is_err() {
-        //         break;
-        //     }
-        // }
+        stream.write_all(&response_msg).unwrap();
     }
 }

@@ -1,17 +1,26 @@
 {
-  "size": [
-    1000.0,
-    1000.0
-  ],
-  "planets": [
+  "ship_config": {
+    "force": 2000.0,
+    "radius": 0.01,
+    "mass": 100.0,
+    "field": 1.0
+  },
+ "bullet_config": {
+  "speed": 0.0,
+  "radius": 0.001,
+  "mass": 1.0,
+  "field": 1.0
+  },
+  "planets": [ 
     {
       "object": {
         "location": [
-          500.0,
-          500.0
+          0.9,
+          0.1
         ],
-        "radius": 30.0,
-        "mass": -20000000.0,
+        "radius": 0.02,
+        "mass": 10.0,
+        "field": 0.1,
         "velocity": [
           0.0,
           0.0
@@ -25,11 +34,12 @@
     {
       "object": {
         "location": [
-          800.0,
-          800.0
+          0.8,
+          0.6
         ],
-        "radius": 30.0,
-        "mass": 62500000.0,
+        "radius": 0.02,
+        "mass": 10.0,
+        "field": 0.1,
         "velocity": [
           0.0,
           0.0
@@ -43,11 +53,12 @@
     {
       "object": {
         "location": [
-          200.0,
-          200.0
+          0.1,
+          0.8
         ],
-        "radius": 30.0,
-        "mass": 62500000.0,
+        "radius": 0.02,
+        "mass": 10.0,
+        "field": 0.1,
         "velocity": [
           0.0,
           0.0
@@ -61,11 +72,12 @@
     {
       "object": {
         "location": [
-          200.0,
-          800.0
+          0.5,
+          0.5
         ],
-        "radius": 30.0,
-        "mass": 62500000.0,
+        "radius": 0.02,
+        "mass": 100000.0,
+        "field": 0.1,
         "velocity": [
           0.0,
           0.0
@@ -75,43 +87,7 @@
           0.0
         ]
       }
-    },
-    {
-      "object": {
-        "location": [
-          800.0,
-          200.0
-        ],
-        "radius": 30.0,
-        "mass": 62500000.0,
-        "velocity": [
-          0.0,
-          0.0
-        ],
-        "acceleration": [
-          0.0,
-          0.0
-        ]
-      }
-    },
-    {
-      "object": {
-        "location": [
-          250.0,
-          500.0
-        ],
-        "radius": 10.0,
-        "mass": 1.0,
-        "velocity": [
-          0.0,
-          500.0
-        ],
-        "acceleration": [
-          0.0,
-          0.0
-        ]
-      }
-    }
+    }   
   ],
   "ships": [],
   "bullets": []

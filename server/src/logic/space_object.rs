@@ -35,9 +35,9 @@ impl Drawable for Planet {
 
 impl Planet {
     #[cfg(test)]
-    pub fn new(location: DVec2, mass: f64, radius: f64, velocity: DVec2) -> Planet {
+    pub fn new(location: DVec2, mass: f64, field: f64, radius: f64, velocity: DVec2) -> Planet {
         Planet {
-            object: Object::new(location, mass, radius, velocity),
+            object: Object::new(location, radius, mass, field, velocity),
         }
     }
 }
@@ -47,9 +47,21 @@ pub struct Ship {
     id: u8,
     object: Object,
     direction: Option<f64>,
+    force: f64,
 }
 
 impl Update for Ship {
+    fn update(&mut self, time: f64, total_field: DVec2) {
+        if let Some(direction) = self.direction {
+            self.object.update(
+                time,
+                total_field + self.force * DVec2::from_angle(direction),
+            );
+        } else {
+            self.object.update(time, total_field);
+        }
+    }
+
     fn object(&self) -> &Object {
         &self.object
     }
@@ -75,8 +87,15 @@ impl Ship {
     pub fn new(id: u8, location: DVec2, ship_config: &ShipConfig) -> Self {
         Ship {
             id,
-            object: Object::new(location, ship_config.radius, ship_config.mass, DVec2::ZERO),
+            object: Object::new(
+                location,
+                ship_config.radius,
+                ship_config.mass,
+                ship_config.field,
+                DVec2::ZERO,
+            ),
             direction: None,
+            force: ship_config.force,
         }
     }
 
@@ -87,6 +106,7 @@ impl Ship {
                 self.object.location,
                 bullet_config.radius,
                 bullet_config.mass,
+                bullet_config.field,
                 DVec2::from_angle(direction) * bullet_config.speed,
             ),
         }
@@ -94,6 +114,8 @@ impl Ship {
 
     pub fn respawn(&mut self, new_location: DVec2) {
         self.object.location = new_location;
+        self.object.velocity = DVec2::ZERO;
+        self.object.acceleration = DVec2::ZERO;
     }
 
     pub fn get_id(&self) -> u8 {

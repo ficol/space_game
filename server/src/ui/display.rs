@@ -1,5 +1,6 @@
 use std::sync::mpsc::{Receiver, Sender};
 
+use glam::DVec2;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -41,14 +42,14 @@ pub trait Drawable {
                 (display_info.x * WIDTH as f64) as i32,
                 (display_info.y * HEIGHT as f64) as i32,
             ),
-            display_info.radius as i32,
+            (display_info.radius * WIDTH as f64) as i32,
         )
     }
 }
 
 pub fn display_game(
     state_recv: Receiver<Vec<u8>>,
-    _command_send: Sender<Vec<u8>>,
+    command_send: Sender<Vec<u8>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
@@ -65,23 +66,45 @@ pub fn display_game(
     let mut event_pump = sdl_context.event_pump()?;
 
     'running: loop {
-        // TODO CATCH COMMANDS
+        let mut direction_vec = DVec2::ZERO;
         for event in event_pump.poll_iter() {
             match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
+                Event::Quit { .. } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(keycode),
                     ..
-                } => break 'running,
+                } => match keycode {
+                    Keycode::Escape => break 'running,
+                    Keycode::W => direction_vec.y = 1.,
+                    Keycode::A => direction_vec.x = -1.,
+                    Keycode::S => direction_vec.y = -1.,
+                    Keycode::D => direction_vec.x = 1.,
+                    _ => (),
+                },
                 _ => {}
             }
         }
+        let direction = if direction_vec == DVec2::ZERO {
+            0.
+        } else {
+            direction_vec.angle_between(DVec2::new(1., 0.))
+        };
 
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
 
         let msg = state_recv.recv().unwrap();
         let space: Space = bincode::deserialize(&msg).unwrap();
+
+        let mut msg = if direction_vec == DVec2::ZERO {
+            vec![0]
+        } else {
+            vec![1]
+        };
+        msg.append(&mut f64::to_be_bytes(direction).to_vec());
+        msg.append(&mut vec![0]);
+        msg.append(&mut vec![0_u8; 8]);
+        command_send.send(msg)?;
 
         space.draw_all(&mut canvas)?;
         canvas.present();

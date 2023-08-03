@@ -1,13 +1,21 @@
-use glam::DVec2;
+use crate::logic::space;
 
-use crate::logic::space::Space;
-
-pub fn run_command(space: &mut Space, command: Vec<u8>) {
-    // TODO HANDLE COMMANDS
-    match command[..] {
-        [3] => space.add_ship(1, DVec2::ZERO),
-        [4] => space.remove_ship(1),
-        [5] => space.shoot(1, 0.0),
+pub fn run_command(space: &mut space::Space, command: Vec<u8>) {
+    match command[0] {
+        0 => space.add_ship(command[1], space::gen_new_location()),
+        1 => space.remove_ship(command[1]),
+        2 => space.move_ship(
+            command[1],
+            if command[2] == 0 {
+                None
+            } else {
+                Some(f64::from_be_bytes(command[3..11].try_into().unwrap()))
+            },
+        ),
+        3 => space.shoot(
+            command[1],
+            f64::from_be_bytes(command[2..10].try_into().unwrap()),
+        ),
         _ => space.move_ship(1, None),
     }
 }

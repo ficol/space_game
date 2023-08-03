@@ -1,4 +1,4 @@
-pub mod object;
+mod object;
 pub mod space;
-pub mod space_object;
+mod space_object;
 pub mod update;
