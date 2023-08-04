@@ -1,6 +1,5 @@
 use std::sync::mpsc::{Receiver, Sender};
 
-use glam::DVec2;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -16,7 +15,6 @@ const HEIGHT: u32 = 1000;
 pub enum DisplayType {
     Planet,
     Ship,
-    Bullet,
 }
 
 pub struct DisplayInfo {
@@ -33,8 +31,7 @@ pub trait Drawable {
         let display_info = self.get_display_info();
         match display_info.display_type {
             DisplayType::Planet => canvas.set_draw_color(Color::RED),
-            DisplayType::Ship => canvas.set_draw_color(Color::BLUE),
-            DisplayType::Bullet => canvas.set_draw_color(Color::WHITE),
+            DisplayType::Ship => canvas.set_draw_color(Color::WHITE),
         }
         draw_circle(
             canvas,
@@ -42,7 +39,7 @@ pub trait Drawable {
                 (display_info.x * WIDTH as f64) as i32,
                 (display_info.y * HEIGHT as f64) as i32,
             ),
-            (display_info.radius * WIDTH as f64) as i32,
+            (display_info.radius * f64::from(WIDTH)) as i32,
         )
     }
 }
@@ -66,48 +63,39 @@ pub fn display_game(
     let mut event_pump = sdl_context.event_pump()?;
 
     'running: loop {
-        let mut direction_vec = DVec2::ZERO;
+        let (mut is_move, mut direction) = (false, 0.);
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'running,
                 Event::KeyDown {
                     keycode: Some(keycode),
                     ..
-                } => match keycode {
-                    Keycode::Escape => break 'running,
-                    Keycode::W => direction_vec.y = 1.,
-                    Keycode::A => direction_vec.x = -1.,
-                    Keycode::S => direction_vec.y = -1.,
-                    Keycode::D => direction_vec.x = 1.,
-                    _ => (),
-                },
+                } => {
+                    (is_move, direction) = match keycode {
+                        Keycode::Escape => break 'running,
+                        Keycode::W => (true, -std::f64::consts::PI / 2.),
+                        Keycode::A => (true, std::f64::consts::PI),
+                        Keycode::S => (true, std::f64::consts::PI / 2.),
+                        Keycode::D => (true, 0.),
+                        _ => (false, 0.),
+                    }
+                }
                 _ => {}
             }
         }
-        let direction = if direction_vec == DVec2::ZERO {
-            0.
-        } else {
-            direction_vec.angle_between(DVec2::new(1., 0.))
-        };
 
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
 
-        let msg = state_recv.recv().unwrap();
-        let space: Space = bincode::deserialize(&msg).unwrap();
-
-        let mut msg = if direction_vec == DVec2::ZERO {
-            vec![0]
-        } else {
-            vec![1]
-        };
-        msg.append(&mut f64::to_be_bytes(direction).to_vec());
-        msg.append(&mut vec![0]);
-        msg.append(&mut vec![0_u8; 8]);
-        command_send.send(msg)?;
-
+        let msg = state_recv.recv()?;
+        let space: Space = bincode::deserialize(&msg)?;
         space.draw_all(&mut canvas)?;
         canvas.present();
+
+        // send move command
+        let mut msg = vec![is_move.into()];
+        msg.append(&mut f64::to_be_bytes(direction).to_vec());
+        command_send.send(msg)?;
     }
 
     Ok(())

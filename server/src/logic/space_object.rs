@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::ui::display::{DisplayInfo, DisplayType, Drawable};
 
 use super::object::{Object, Update};
-use super::space::{BulletConfig, ShipConfig};
+use super::space::ShipConfig;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Planet {
@@ -99,23 +99,19 @@ impl Ship {
         }
     }
 
-    pub fn shoot(&self, direction: f64, bullet_config: &BulletConfig) -> Bullet {
-        Bullet {
-            id: self.id,
-            object: Object::new(
-                self.object.location,
-                bullet_config.radius,
-                bullet_config.mass,
-                bullet_config.field,
-                DVec2::from_angle(direction) * bullet_config.speed,
-            ),
-        }
-    }
-
     pub fn respawn(&mut self, new_location: DVec2) {
         self.object.location = new_location;
         self.object.velocity = DVec2::ZERO;
         self.object.acceleration = DVec2::ZERO;
+    }
+
+    #[cfg(test)]
+    pub fn get_motion(&self) -> (DVec2, DVec2, DVec2) {
+        (
+            self.object.location,
+            self.object.velocity,
+            self.object.acceleration,
+        )
     }
 
     pub fn get_id(&self) -> u8 {
@@ -124,33 +120,5 @@ impl Ship {
 
     pub fn change_direction(&mut self, direction: Option<f64>) {
         self.direction = direction;
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Bullet {
-    id: u8,
-    object: Object,
-}
-
-impl Update for Bullet {
-    fn object(&self) -> &Object {
-        &self.object
-    }
-
-    fn object_mut(&mut self) -> &mut Object {
-        &mut self.object
-    }
-}
-
-impl Drawable for Bullet {
-    fn get_display_info(&self) -> DisplayInfo {
-        DisplayInfo {
-            display_type: DisplayType::Bullet,
-            id: Some(self.id),
-            x: self.object.location.x,
-            y: self.object.location.y,
-            radius: self.object.radius,
-        }
     }
 }

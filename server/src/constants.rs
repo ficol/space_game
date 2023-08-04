@@ -1,4 +1,3 @@
 pub const GAME_UPDATE_TICK_SECONDS: f64 = 0.001;
 pub const GAME_STATE_TICK_SECONDS: f64 = 0.01;
-pub const MAX_PLAYERS: u8 = 2;
-pub const MAX_PLAYERS_MSG: [u8; 1] = [0];
+pub const MAX_PLAYERS: u8 = 8;

@@ -21,19 +21,29 @@ fn handle_connection<T: Write + Read>(
     mut stream: T,
     state_sender: Sender<Vec<u8>>,
     command_receiver: Receiver<Vec<u8>>,
-) {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     loop {
         let mut buf_reader = BufReader::new(&mut stream);
+        // read msg length
         let mut length_bytes = [0; std::mem::size_of::<u32>()];
-        buf_reader.read_exact(&mut length_bytes).unwrap();
-        let mut msg_buf = buf_reader.take(u32::from_be_bytes(length_bytes) as u64);
+        buf_reader.read_exact(&mut length_bytes)?;
+
+        // read state
+        let length = u32::from_be_bytes(length_bytes);
+        let mut msg_buf = buf_reader.take(length.into());
         let mut msg = Vec::new();
-        msg_buf.read_to_end(&mut msg).unwrap();
-        state_sender.send(msg).unwrap();
-        let mut response_msg = command_receiver.recv().unwrap();
+        msg_buf.read_to_end(&mut msg)?;
+
+        // send state to display
+        state_sender.send(msg)?;
+
+        // receive last command from display
+        let mut response_msg = command_receiver.recv()?;
         while let Ok(msg) = command_receiver.try_recv() {
             response_msg = msg;
         }
-        stream.write_all(&response_msg).unwrap();
+
+        // send command to server
+        stream.write_all(&response_msg)?;
     }
 }

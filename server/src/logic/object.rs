@@ -14,10 +14,6 @@ pub trait Update {
         self.object().get_field(other.object())
     }
 
-    fn in_space(&self) -> bool {
-        self.object().in_space()
-    }
-
     fn object(&self) -> &Object;
 
     fn object_mut(&mut self) -> &mut Object;
@@ -79,10 +75,6 @@ impl Object {
             self.acceleration.y = 0.;
         }
         self.location = self.location.clamp(DVec2::ZERO, DVec2::new(1., 1.));
-    }
-
-    fn in_space(&self) -> bool {
-        self.location.max_element() < 1. && self.location.min_element() > 0.
     }
 }
 

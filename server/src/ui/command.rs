@@ -9,12 +9,8 @@ pub fn run_command(space: &mut space::Space, command: Vec<u8>) {
             if command[2] == 0 {
                 None
             } else {
-                Some(f64::from_be_bytes(command[3..11].try_into().unwrap()))
+                Some(f64::from_be_bytes(command[3..].try_into().unwrap()))
             },
-        ),
-        3 => space.shoot(
-            command[1],
-            f64::from_be_bytes(command[2..10].try_into().unwrap()),
         ),
         _ => space.move_ship(1, None),
     }

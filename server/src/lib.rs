@@ -26,7 +26,7 @@ pub fn run(path: &str, addr: &str) -> Result<(), Box<dyn std::error::Error>> {
     let update_handle = thread::spawn(move || run_game(&update_counter, command_receiver));
 
     // communication space thread
-    let state_bus = Arc::new(Mutex::new(Bus::new(constants::MAX_PLAYERS as usize)));
+    let state_bus = Arc::new(Mutex::new(Bus::new(constants::MAX_PLAYERS.into())));
     let space_counter = Arc::clone(&space_counter);
     let broadcast = Arc::clone(&state_bus);
     let state_handle = thread::spawn(move || run_state_send(&space_counter, &broadcast));

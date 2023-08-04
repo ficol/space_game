@@ -5,17 +5,15 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     object::Update,
-    space_object::{Bullet, Planet, Ship},
+    space_object::{Planet, Ship},
 };
 use crate::ui::display::Drawable;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Space {
     ship_config: ShipConfig,
-    bullet_config: BulletConfig,
     planets: Vec<Planet>,
     ships: Vec<Ship>,
-    bullets: Vec<Bullet>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -26,23 +24,13 @@ pub struct ShipConfig {
     pub field: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct BulletConfig {
-    pub speed: f64,
-    pub radius: f64,
-    pub mass: f64,
-    pub field: f64,
-}
-
 impl Space {
     #[cfg(test)]
-    pub fn new(ship_config: ShipConfig, bullet_config: BulletConfig) -> Space {
+    pub fn new(ship_config: ShipConfig) -> Space {
         Space {
             ship_config,
-            bullet_config,
             planets: vec![],
             ships: vec![],
-            bullets: vec![],
         }
     }
 
@@ -57,16 +45,12 @@ impl Space {
         for ship in self.ships.iter() {
             ship.draw(canvas)?;
         }
-        for bullet in self.bullets.iter() {
-            bullet.draw(canvas)?;
-        }
         Ok(())
     }
 
     pub fn update(&mut self, time: f64) {
         self.update_planets(time);
         self.update_ships(time);
-        self.update_bullets(time);
     }
 
     pub fn add_ship(&mut self, id: u8, location: DVec2) {
@@ -86,14 +70,6 @@ impl Space {
         let index = self.get_ship_index(id);
         if let Some(index) = index {
             self.ships[index].change_direction(direction);
-        }
-    }
-
-    pub fn shoot(&mut self, id: u8, direction: f64) {
-        let index = self.get_ship_index(id);
-        if let Some(index) = index {
-            self.bullets
-                .push(self.ships[index].shoot(direction, &self.bullet_config));
         }
     }
 
@@ -117,26 +93,10 @@ impl Space {
         for ship in self.ships.iter_mut() {
             let total_field = self.planets.iter().map(|other| ship.get_field(other)).sum();
             ship.update(time, total_field);
-            if self.planets.iter().any(|planet| ship.collision(planet))
-                || self.bullets.iter().any(|bullet| ship.collision(bullet))
-            {
+            if self.planets.iter().any(|planet| ship.collision(planet)) {
                 ship.respawn(gen_new_location());
             }
         }
-    }
-
-    fn update_bullets(&mut self, time: f64) {
-        for bullet in self.bullets.iter_mut() {
-            let total_field = self
-                .planets
-                .iter()
-                .map(|other| bullet.get_field(other))
-                .sum();
-            bullet.update(time, total_field);
-        }
-        self.bullets.retain(|bullet| {
-            bullet.in_space() && self.planets.iter().all(|planet| !bullet.collision(planet))
-        });
     }
 
     fn get_ship_index(&self, id: u8) -> Option<usize> {
@@ -166,13 +126,7 @@ mod tests {
             mass: 2.,
             field: 1.,
         };
-        let bullet_config = BulletConfig {
-            speed: 0.1,
-            radius: 0.1,
-            mass: 1.,
-            field: 2.,
-        };
-        Space::new(ship_config, bullet_config)
+        Space::new(ship_config)
     }
 
     #[test]
@@ -220,46 +174,24 @@ mod tests {
     }
 
     #[test]
-    fn shoot_ship_exists() {
+    fn update_space_ship_no_collision() {
         let mut space = basic_space();
-        space.add_ship(1, DVec2::ZERO);
-        space.shoot(1, 0.);
-        assert_eq!(1, space.bullets.len());
+        space.add_planet(DVec2::new(1., 0.), 0., 1., 0.1, DVec2::ZERO);
+        space.add_ship(1, DVec2::new(0., 0.));
+        space.update(1.);
+        assert_eq!(1, space.ships.len());
+        let (_, velocity, _) = space.ships[0].get_motion();
+        assert_eq!(DVec2::new(0.5, 0.), velocity);
     }
 
     #[test]
-    fn shoot_no_ship() {
-        let mut space = basic_space();
-        space.shoot(1, 0.);
-        assert_eq!(0, space.bullets.len());
-    }
-
-    #[test]
-    fn update_space_bullet_no_collision() {
-        let mut space = basic_space();
-        space.add_planet(DVec2::new(0.5, 0.5), 0., 0.1, 0.1, DVec2::ZERO);
-        space.add_ship(1, DVec2::new(0.7, 0.7));
-        space.shoot(1, 0.);
-        space.update(0.);
-        assert_eq!(1, space.bullets.len());
-    }
-
-    #[test]
-    fn update_space_bullet_out_of_space() {
-        let mut space = basic_space();
-        space.add_ship(1, DVec2::ZERO);
-        space.shoot(1, 0.);
-        space.update(0.);
-        assert_eq!(0, space.bullets.len());
-    }
-
-    #[test]
-    fn update_space_bullet_collision_planet() {
+    fn update_space_ship_collision_planet() {
         let mut space = basic_space();
         space.add_planet(DVec2::new(0.5, 0.5), 0., 0.1, 0.1, DVec2::ZERO);
         space.add_ship(1, DVec2::new(0.5, 0.5));
-        space.shoot(1, 0.);
-        space.update(0.);
-        assert_eq!(0, space.bullets.len());
+        space.update(1.);
+        assert_eq!(1, space.ships.len());
+        let (_, velocity, _) = space.ships[0].get_motion();
+        assert_eq!(DVec2::ZERO, velocity);
     }
 }
