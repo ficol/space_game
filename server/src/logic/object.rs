@@ -55,7 +55,7 @@ impl Object {
     }
 
     fn get_field(&self, other: &Self) -> DVec2 {
-        if self.location.distance(other.location) < other.radius {
+        if self.location.distance(other.location) < 1e-3 {
             return DVec2::ZERO;
         }
         let effective_field_ratio =
