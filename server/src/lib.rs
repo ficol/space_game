@@ -4,7 +4,6 @@ mod networking;
 mod ui;
 
 pub use logic::space::Space;
-pub use ui::display::display_game;
 
 use bus::Bus;
 use std::fs;

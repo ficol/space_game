@@ -38,12 +38,17 @@ impl Space {
         bincode::serialize(&self).unwrap()
     }
 
-    pub fn draw_all(&self, canvas: &mut Canvas<Window>) -> Result<(), String> {
+    pub fn draw_all(
+        &self,
+        canvas: &mut Canvas<Window>,
+        width: u32,
+        height: u32,
+    ) -> Result<(), String> {
         for planet in self.planets.iter() {
-            planet.draw(canvas)?;
+            planet.draw(canvas, width, height)?;
         }
         for ship in self.ships.iter() {
-            ship.draw(canvas)?;
+            ship.draw(canvas, width, height)?;
         }
         Ok(())
     }

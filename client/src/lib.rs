@@ -1,10 +1,10 @@
+mod display;
+
 use std::io::{BufReader, Read, Write};
 use std::net::TcpStream;
-use std::sync::mpsc::Sender;
-use std::sync::mpsc::{self, Receiver};
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
-
-use server::display_game;
 
 pub fn run(ip: &str) -> Result<(), Box<dyn std::error::Error>> {
     let stream = TcpStream::connect(ip)?;
@@ -14,7 +14,7 @@ pub fn run(ip: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     thread::spawn(move || handle_connection(stream, state_send, command_recv));
 
-    display_game(state_recv, command_send)
+    display::display_game(state_recv, command_send)
 }
 
 fn handle_connection<T: Write + Read>(
