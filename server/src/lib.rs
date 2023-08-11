@@ -4,6 +4,7 @@ mod networking;
 mod ui;
 
 pub use logic::space::Space;
+pub use ui::display::{DisplayInfo, DisplayType, Drawer};
 
 use bus::Bus;
 use std::fs;

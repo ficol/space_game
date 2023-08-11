@@ -1,13 +1,12 @@
 use glam::DVec2;
 use rand::Rng;
-use sdl2::{render::Canvas, video::Window};
 use serde::{Deserialize, Serialize};
 
 use super::{
     object::Update,
     space_object::{Planet, Ship},
 };
-use crate::ui::display::Drawable;
+use crate::ui::display::Drawer;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Space {
@@ -40,15 +39,15 @@ impl Space {
 
     pub fn draw_all(
         &self,
-        canvas: &mut Canvas<Window>,
+        drawer: &mut impl Drawer,
         width: u32,
         height: u32,
     ) -> Result<(), String> {
         for planet in self.planets.iter() {
-            planet.draw(canvas, width, height)?;
+            drawer.draw(planet.get_display_info(), width, height)?;
         }
         for ship in self.ships.iter() {
-            ship.draw(canvas, width, height)?;
+            drawer.draw(ship.get_display_info(), width, height)?;
         }
         Ok(())
     }
